@@ -29,7 +29,7 @@ q = %w(
   Gaudí
   Tibidabo
   Collserola
-).join(' OR ')
+)
 puts "¡LIVE! Processing chunk #{q}..."
 Guzzler.live_tweets q
 

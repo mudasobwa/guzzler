@@ -4,7 +4,8 @@ require 'guzzler/sucker'
 
 module Guzzler
   BCN_GEO = { lat: 41.390205, long: 2.154007 }.freeze
-  BCN_RECTANGLE = '41.45,2.03,41.34,2.25'.freeze
+  BCN_RECTANGLE = '41.34,2.03,41.45,2.25'.freeze
+  SPAIN_RECTANGLE = '36.88,-6.52,43.56,3.61'.freeze
   DATABASE = 'guzzler'.freeze
 
   def self.get_tag tag, lang: :en, from: nil, collection: :guzzler
@@ -58,9 +59,11 @@ module Guzzler
     counter = 0
 
     begin
+      # twitter.filter(locations: SPAIN_RECTANGLE) do |tweet|
+      # twitter.filter(track: keywords.join(',')) do |tweet|
       twitter.filter(locations: BCN_RECTANGLE, track: keywords.join(',')) do |tweet|
-        counter += 1
         puts "[NFO] received: #{tweet.text}" if (counter % 200).zero?
+        counter += 1
         next unless tweet.is_a? Twitter::Tweet
         mongo.insert_one tweet.to_h
       end
@@ -71,6 +74,7 @@ module Guzzler
       retry
     rescue => error
       puts "[ERR] #{error.inspect}"
+      puts error.backtrace.join $/
       sleep 60
       retry
     end
