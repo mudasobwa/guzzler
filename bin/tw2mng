@@ -31,7 +31,7 @@ q = %w(
   Collserola
 ).join(' OR ')
 puts "Processing chunk #{q}..."
-Guzzler.get_tweets q
+Guzzler.get_tweets q, from: 730397067957272584
 
 exit 0
 

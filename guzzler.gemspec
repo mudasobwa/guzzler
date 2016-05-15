@@ -30,7 +30,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'pry', '~> 0.10'
   spec.add_development_dependency 'awesome_print', '~> 1.6'
 
+  spec.add_dependency 'hashie', '~> 3'
   spec.add_dependency 'twitter', '~> 5.16'
-  spec.add_dependency 'mongo', '~> 1.12'
-  spec.add_dependency 'bson_ext', '~> 1.12'
+  spec.add_dependency 'mongo', '~> 2'
 end

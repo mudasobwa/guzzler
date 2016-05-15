@@ -1,4 +1,6 @@
 require 'mongo'
+require 'logger'
+
 module Guzzler
   module Spitter
     class Mongo
@@ -7,12 +9,8 @@ module Guzzler
       attr_reader :client
 
       def initialize *args
-        @client = MongoClient.new(*args)
-      end
-
-      def db db
-        return @db if @db && @db.name == db
-        @db = client.db(db)
+        Mongo::Logger.logger.level = ::Logger::WARN
+        @client = Mongo::Client.new(*args)
       end
     end
   end

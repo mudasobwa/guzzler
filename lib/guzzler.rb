@@ -6,16 +6,16 @@ module Guzzler
   BCN_GEO = { lat: 41.390205, long: 2.154007 }.freeze
   DATABASE = 'guzzler'.freeze
 
-  def self.get_tag tag, lang: :en, collection: :guzzler
-    get_tweets "##{tag}", lang, collection
+  def self.get_tag tag, lang: :en, from: nil, collection: :guzzler
+    get_tweets "##{tag}", lang: lang, from: from, collection: collection
   end
 
-  def self.get_tweets query, lang: :en, collection: :guzzler
+  def self.get_tweets query, lang: :en, from: nil, collection: :guzzler
     twitter = Guzzler::Sucker::Driver.new(driver: :twitter).twitter.client
-    mongo = Guzzler::Spitter::Driver.new(driver: :mongo).mongo.db(DATABASE)[collection.to_s]
+    mongo = Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s]
     counter = 0
 
-    loop.inject(nil) do |memo|
+    loop.inject(from) do |memo|
       # hash = { lang: lang.to_s, count: 100, result_type: 'recent' }
       hash = { lang: lang.to_s, result_type: 'recent' }
       # rubocop:disable Performance/RedundantMerge
@@ -30,7 +30,7 @@ module Guzzler
         ).inject(nil) do |rmemo, res| # .take(hash[:count]) ??
           next rmemo unless res.text && res.text.length > 4
           res.tap do |r|
-            mongo.insert r.to_h
+            mongo.insert_one r.to_h
             counter += 1
             puts "#{counter.to_s.rjust(10)} records aggregated" if (counter % 200).zero?
           end
@@ -42,12 +42,12 @@ module Guzzler
         retry
       rescue => error
         puts "[ERR] #{error.inspect}"
-        sleep 15 * 60
+        sleep 60
         retry
       end
 
-      break memo if last.nil? || last.created_at < (Date.today - 365).to_time
-      last.id
+      break memo if last && last.created_at < (Date.today - 365).to_time
+      last.nil? ? mongo.find.sort(created_at: 1).limit(1).first['id'] : last.id
     end
   end
 end
