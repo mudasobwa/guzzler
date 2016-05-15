@@ -17,3 +17,9 @@ Style/MethodDefParentheses:
     - 'spec/**/*'
     - 'test/**/*'
     - 'lib/**/*'
+
+Style/ParallelAssignment:
+  Exclude:
+    - 'spec/**/*'
+    - 'test/**/*'
+    - 'lib/**/*'

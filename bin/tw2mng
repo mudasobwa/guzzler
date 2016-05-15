@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'guzzler'
+
+q = %w(
+  VilaOlimpica
+  Lesseps
+  Raval
+  ElPrat
+  Batllo
+  LaRambla
+  Montjuic
+  Guell
+  PassatgeDeGracia
+  GranDeGracia
+  Pedrera
+  ElBorn
+  AnticHospital SantaCreu
+  SantJaume
+  PasseigDelColom
+  AvingudaDiagonal
+  Llotja
+  Pedralbes
+  Lloctinent
+  CaixaForum
+  Cosmocaixa
+  TorreAgbar
+  Gaudí
+  Tibidabo
+  Collserola
+).join(' OR ')
+puts "Processing chunk #{q}..."
+Guzzler.get_tweets q
+
+exit 0
+
+File.read('data/keywords').split(/^\s*$/).reverse.each.with_index do |chunk, i|
+  next unless [1, 12].include? i
+
+  query = chunk.split($/).map { |c| %Q("#{c}") }.join(' OR ')
+  puts "Processing chunk #{query}..."
+  Guzzler.get_tweets query
+end
