@@ -12,6 +12,13 @@ Style/Documentation:
     - 'test/**/*'
     - 'lib/**/*'
 
+Style/SpecialGlobalVars:
+  Exclude:
+    - 'bin/**/*'
+    - 'spec/**/*'
+    - 'test/**/*'
+    - 'lib/**/*'
+
 Style/MethodDefParentheses:
   Exclude:
     - 'spec/**/*'

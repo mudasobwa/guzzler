@@ -15,8 +15,10 @@ module Guzzler
   def self.get_tweets query, lang: :en, from: nil, collection: :guzzler
     twitter = Guzzler::Sucker::Driver.new(driver: :twitter).twitter.client
     mongo = Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s]
-    counter = 0
 
+    from ||= mongo.find.sort(created_at: 1).limit(1).first['id'] rescue nil
+
+    counter = 0
     loop.inject(from) do |memo|
       # hash = { lang: lang.to_s, count: 100, result_type: 'recent' }
       hash = { lang: lang.to_s, result_type: 'recent' }
