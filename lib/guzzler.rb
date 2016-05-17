@@ -8,77 +8,76 @@ module Guzzler
   SPAIN_RECTANGLE = '36.88,-6.52,43.56,3.61'.freeze
   DATABASE = 'guzzler'.freeze
 
+  # FIXME INDEX !!!
+  def self.connect collection
+    [
+      Guzzler::Sucker::Driver.new(driver: :twitter).twitter.client,
+      Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s],
+      (mongo.find.sort(created_at: 1).limit(1).first['id'] rescue nil),
+      mongo.find.count
+    ]
+  end
+
   def self.get_tag tag, lang: :en, from: nil, collection: :guzzler
     get_tweets "##{tag}", lang: lang, from: from, collection: collection
   end
 
   def self.get_tweets query, lang: :en, from: nil, collection: :guzzler
-    twitter = Guzzler::Sucker::Driver.new(driver: :twitter).twitter.client
-    mongo = Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s]
+    loop do
+      twitter, mongo, last, counter = connect collection
+      break if last && last.created_at < (Date.today - 365).to_time
 
-    from ||= mongo.find.sort(created_at: 1).limit(1).first['id'] rescue nil
+      from ||= last
 
-    counter = 0
-    loop.inject(from) do |memo|
-      # hash = { lang: lang.to_s, count: 100, result_type: 'recent' }
       hash = { lang: lang.to_s, result_type: 'recent' }
-      # rubocop:disable Performance/RedundantMerge
-      # hash.merge!(max_id: memo, since_id: memo - hash[:count]) if memo
-      hash.merge!(max_id: memo) if memo
-      # rubocop:enable Performance/RedundantMerge
+      hash[:max_id] = last.id if last
+
       begin
-        last = twitter.search(
+        twitter.search(
           "#{query} -rt", hash
           # uncomment the following line to get it in BCN
           # geocode: "#{Guzzler::BCN_GEO[:lat]},#{Guzzler::BCN_GEO[:long]},50km"
-        ).inject(nil) do |rmemo, res| # .take(hash[:count]) ??
-          next rmemo unless res.text && res.text.length > 4
-          res.tap do |r|
-            mongo.insert_one r.to_h
-            counter += 1
-            puts "#{counter.to_s.rjust(10)} records aggregated" if (counter % 200).zero?
-          end
+        ).each do |res| # .take(hash[:count]) ??
+          next unless res.text && res.text.length > 4
+          mongo.insert_one r.to_h
+          counter += 1
+          puts "#{counter.to_s.rjust(10)} records aggregated" if (counter % 200).zero?
         end
       rescue Twitter::Error::TooManyRequests => error
         puts "[ERR] #{error.rate_limit.reset_in.to_s.rjust(10)} seconds to wait..."
         # puts error.rate_limit.inspect
         sleep error.rate_limit.reset_in + 1
-        retry
       rescue => error
         puts "[ERR] #{error.inspect}"
         sleep 60
-        retry
       end
 
-      break memo if last && last.created_at < (Date.today - 365).to_time
-      last.nil? ? mongo.find.sort(created_at: 1).limit(1).first['id'] : last.id
+      from = nil
     end
   end
 
   def self.live_tweets keywords, collection: :guzzler_live
-    twitter = Guzzler::Sucker::Driver.new(driver: :twitter, live: true).twitter.client
-    mongo = Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s]
-    counter = 0
+    loop do
+      twitter, mongo, _, counter = connect collection
 
-    begin
-      # twitter.filter(locations: SPAIN_RECTANGLE) do |tweet|
-      # twitter.filter(track: keywords.join(',')) do |tweet|
-      twitter.filter(locations: BCN_RECTANGLE, track: keywords.join(',')) do |tweet|
-        puts "[NFO] received: #{tweet.text}" if (counter % 200).zero?
-        counter += 1
-        next unless tweet.is_a? Twitter::Tweet
-        mongo.insert_one tweet.to_h
+      begin
+        # twitter.filter(locations: SPAIN_RECTANGLE) do |tweet|
+        # twitter.filter(track: keywords.join(',')) do |tweet|
+        twitter.filter(locations: BCN_RECTANGLE, track: keywords.join(',')) do |tweet|
+          puts "[NFO] received: #{tweet.text}" if (counter % 200).zero?
+          counter += 1
+          next unless tweet.is_a?(Twitter::Tweet) && %w(en ru).include?(tweet.lang)
+          mongo.insert_one tweet.to_h
+        end
+      rescue Twitter::Error::TooManyRequests => error
+        puts "[ERR] #{error.rate_limit.reset_in.to_s.rjust(10)} seconds to wait..."
+        # puts error.rate_limit.inspect
+        sleep error.rate_limit.reset_in + 1
+      rescue => error
+        puts "[ERR] #{error.inspect}"
+        puts error.backtrace.join $/
+        sleep 60
       end
-    rescue Twitter::Error::TooManyRequests => error
-      puts "[ERR] #{error.rate_limit.reset_in.to_s.rjust(10)} seconds to wait..."
-      # puts error.rate_limit.inspect
-      sleep error.rate_limit.reset_in + 1
-      retry
-    rescue => error
-      puts "[ERR] #{error.inspect}"
-      puts error.backtrace.join $/
-      sleep 60
-      retry
     end
   end
 end
