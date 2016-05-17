@@ -12,8 +12,8 @@ module Guzzler
   def self.connect collection
     [
       Guzzler::Sucker::Driver.new(driver: :twitter).twitter.client,
-      Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s],
-      (mongo.find.sort(created_at: 1).limit(1).first['id'] rescue nil),
+      mongo = Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s],
+      (mongo.find.sort(created_at: 1).limit(1).first rescue nil),
       mongo.find.count
     ]
   end
@@ -25,12 +25,14 @@ module Guzzler
   def self.get_tweets query, lang: :en, from: nil, collection: :guzzler
     loop do
       twitter, mongo, last, counter = connect collection
-      break if last && last.created_at < (Date.today - 365).to_time
+      break if last && DateTime.parse(last['created_at']) < (Date.parse('2016-05-15') - 365).to_datetime
 
       from ||= last
 
       hash = { lang: lang.to_s, result_type: 'recent' }
-      hash[:max_id] = last.id if last
+      hash[:max_id] = last['id'] if last
+
+      puts "Dealing with: #{last}"
 
       begin
         twitter.search(
@@ -39,9 +41,9 @@ module Guzzler
           # geocode: "#{Guzzler::BCN_GEO[:lat]},#{Guzzler::BCN_GEO[:long]},50km"
         ).each do |res| # .take(hash[:count]) ??
           next unless res.text && res.text.length > 4
-          mongo.insert_one r.to_h
+          mongo.insert_one res.to_h
           counter += 1
-          puts "#{counter.to_s.rjust(10)} records aggregated" if (counter % 200).zero?
+          puts "#{counter.to_s.rjust(10)} records. Latest: #{res.created_at}" if (counter % 200).zero?
         end
       rescue Twitter::Error::TooManyRequests => error
         puts "[ERR] #{error.rate_limit.reset_in.to_s.rjust(10)} seconds to wait..."
