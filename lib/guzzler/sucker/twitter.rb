@@ -21,7 +21,7 @@ module Guzzler
           config.consumer_secret     = CONSUMER_SECRET
           config.access_token        = ACCESS_TOKEN
           config.access_token_secret = ACCESS_SECRET
-          config.bearer_token        = CONSUMER_BEARER if config.respond_to? :bearer_token
+          # config.bearer_token        = CONSUMER_BEARER if config.respond_to? :bearer_token
         end
       end
     end

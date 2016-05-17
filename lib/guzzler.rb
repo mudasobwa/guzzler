@@ -4,7 +4,7 @@ require 'guzzler/sucker'
 
 module Guzzler
   BCN_GEO = { lat: 41.390205, long: 2.154007 }.freeze
-  BCN_RECTANGLE = '41.34,2.03,41.45,2.25'.freeze
+  BCN_RECTANGLE = '2.03,41.34,2.25,41.45'.freeze
   SPAIN_RECTANGLE = '36.88,-6.52,43.56,3.61'.freeze
   DATABASE = 'guzzler'.freeze
 
