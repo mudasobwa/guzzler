@@ -24,17 +24,17 @@ module Guzzler
 
   def self.get_tweets query, lang: :en, from: nil, collection: :guzzler
     loop do
-      twitter, mongo, last, counter = connect collection
-      break if last && DateTime.parse(last['created_at']) < (Date.parse('2016-05-15') - 365).to_datetime
-
-      from ||= last
-
-      hash = { lang: lang.to_s, result_type: 'recent' }
-      hash[:max_id] = last['id'] if last
-
-      puts "Dealing with: #{last}"
-
       begin
+        twitter, mongo, last, counter = connect collection
+        break if last && DateTime.parse(last['created_at']) < (Date.parse('2016-05-15') - 365).to_datetime
+
+        from ||= last
+
+        hash = { lang: lang.to_s, result_type: 'recent' }
+        hash[:max_id] = last['id'] if last
+
+        puts "Dealing with: #{last}"
+
         twitter.search(
           "#{query} -rt", hash
           # uncomment the following line to get it in BCN
@@ -60,9 +60,9 @@ module Guzzler
 
   def self.live_tweets keywords, collection: :guzzler_live
     loop do
-      twitter, mongo, _, counter = connect collection
-
       begin
+        twitter, mongo, _, counter = connect collection
+
         # twitter.filter(locations: SPAIN_RECTANGLE) do |tweet|
         # twitter.filter(track: keywords.join(',')) do |tweet|
         twitter.filter(locations: BCN_RECTANGLE, track: keywords.join(',')) do |tweet|
