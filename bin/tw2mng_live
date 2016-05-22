@@ -30,8 +30,8 @@ q = %w(
   Tibidabo
   Collserola
 )
-puts "¡LIVE! Processing chunk #{q}..."
-Guzzler.live_tweets q
+puts "¡LIVE! Processing location"
+Guzzler.live_tweets
 
 exit 0
 
