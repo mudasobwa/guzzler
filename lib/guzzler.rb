@@ -80,7 +80,7 @@ module Guzzler
       rescue Twitter::Error::TooManyRequests => error
         puts "[ERR] #{error.rate_limit.reset_in.to_s.rjust(10)} seconds to wait..."
         # puts error.rate_limit.inspect
-        sleep error.rate_limit.reset_in + 1
+        sleep((error.rate_limit.reset_in || 15 * 60) + 1)
       rescue => error
         puts "[ERR] #{error.inspect}"
         puts error.backtrace.join $/
@@ -95,16 +95,18 @@ module Guzzler
     twitter, mongo, = connect collection, live: false
 
     tweets = loop.each_with_object([]) do |_, memo|
-      params = { count: 200, include_rts: true }
-      params[:max_id] = memo.last['max_id'] unless memo.empty?
-      memo |= twitter.user_timeline(user, params)
-      break memo if memo.last.created_at < (Date.today - 14).to_datetime
+      begin
+        params = { count: 200, include_rts: true }
+        params[:max_id] = memo.last['max_id'] unless memo.empty?
+        memo |= twitter.user_timeline(user, params)
+        break memo if memo.last.created_at.to_datetime < (Date.today - 14).to_datetime
+      rescue Twitter::Error::TooManyRequests => error
+        puts "[ERR] #{error.rate_limit.reset_in.to_s.rjust(10)} to wait, writing what we have..."
+        break memo
+      end
     end
 
-    if tweets.any? { |t| t.user && /Barcelona/i !~ t.user.location || t.place && /Barcelona/i !~ t.place.name }
-      # next unless tweet.is_a?(Twitter::Tweet) # && %w(en ru).include?(tweet.lang)
-      puts "[HIST]: Updated for #{user}"
-      mongo.insert_many(tweets.map(&:to_h))
-    end
+    puts "[HIST]: Updated for #{user}"
+    mongo.insert_many(tweets.map(&:to_h))
   end
 end
