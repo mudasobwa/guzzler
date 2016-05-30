@@ -10,7 +10,7 @@ module Guzzler
 
   # FIXME: INDEX !!!
   def self.recordset collection
-    Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s]
+    (@mongo ||= {})[collection] ||= Guzzler::Spitter::Driver.new(driver: :mongo).mongo.client[collection.to_s]
   end
 
   def self.connect collection, live: false
